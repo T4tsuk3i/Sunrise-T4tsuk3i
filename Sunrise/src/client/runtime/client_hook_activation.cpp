@@ -14,7 +14,6 @@
 #include "../content/bootstrap/bootstrap_token_publish.h"
 #include "../content/investment/worker.h"
 #include "../executable/image.h"
-#include "../diagnostics/stat_block_scan.h"
 #include "../hooks/assert_handler/assert_handler_lifecycle.h"
 #include "../hooks/async_io/async_io_lifetime_guard.h"
 #include "../hooks/bitmap/bitmap_hook_lifecycle.h"
@@ -223,7 +222,6 @@ void clear_game_targets() noexcept {
     }
     // One-shot hunt for the sandbox's character stat block, scheduled on its own thread after a
     // configured delay. Disabled unless settings request it.
-    (void)diagnostics::start_stat_block_scan();
     content::investment::worker::activate();
     content::activity::scriptables::activate();
     return true;

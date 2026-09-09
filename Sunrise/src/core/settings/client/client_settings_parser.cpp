@@ -22,10 +22,7 @@ bool Parser::client_settings(client::Settings& output) noexcept {
     bool hasCharacterStatRow = false;
     bool hasCharacterStatFillValue = false;
     bool hasCharacterStatFillFirst = false;
-    bool hasCharacterStatFillLast = false;
-    bool hasStatScanDelay = false;
-    bool hasStatScanWindow = false;
-    bool hasStatScanValues = false;
+    bool hasCharacterStatFillLast = false;
     bool hasCharacterStatRowBonuses = false;
     bool hasInvestmentDump = false;
     if (consume('}')) {
@@ -121,45 +118,6 @@ bool Parser::client_settings(client::Settings& output) noexcept {
             }
             candidate.characterStatFillLast = static_cast<std::int32_t>(value);
             hasCharacterStatFillLast = true;
-        } else if (key == "stat_scan_delay_ms") {
-            std::uint64_t value = 0;
-            if (hasStatScanDelay || !unsigned_integer(value)) {
-                return false;
-            }
-            candidate.statScanDelayMs = value;
-            hasStatScanDelay = true;
-        } else if (key == "stat_scan_window_bytes") {
-            std::uint64_t value = 0;
-            if (hasStatScanWindow || !unsigned_integer(value) || value == 0
-                || value > client::kMaximumStatScanWindow) {
-                return false;
-            }
-            candidate.statScanWindowBytes = value;
-            hasStatScanWindow = true;
-        } else if (key == "stat_scan_values") {
-            if (hasStatScanValues || !consume('[')) {
-                return false;
-            }
-            candidate.statScanValueCount = 0;
-            if (!consume(']')) {
-                for (;;) {
-                    std::int64_t value = 0;
-                    if (candidate.statScanValueCount >= candidate.statScanValues.size()
-                        || !signed_integer(value)) {
-                        return false;
-                    }
-                    candidate.statScanValues[candidate.statScanValueCount] =
-                        static_cast<std::int32_t>(value);
-                    ++candidate.statScanValueCount;
-                    if (consume(']')) {
-                        break;
-                    }
-                    if (!consume(',')) {
-                        return false;
-                    }
-                }
-            }
-            hasStatScanValues = true;
         } else if (key == "character_stat_row") {
             std::int64_t value = 0;
             if (hasCharacterStatRow || !signed_integer(value) || value > 255 || value < -1) {
