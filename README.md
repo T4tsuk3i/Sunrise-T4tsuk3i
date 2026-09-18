@@ -1,10 +1,11 @@
 # Sunrise (T4tsuk3i personal build)
 
 Personal fork of [stanuwu/Sunrise](https://github.com/stanuwu/Sunrise), `dev` branch, built and
-run for my own offline single-player use. Not published anywhere — this README documents what
-*this specific build* actually does, not the generic upstream pitch.
+run for my own offline single-player use, hosted on GitHub at
+[T4tsuk3i/Sunrise-T4tsuk3i](https://github.com/T4tsuk3i/Sunrise-T4tsuk3i) — this README documents
+what *this specific build* actually does, not the generic upstream pitch.
 
-Base version: `0.3.2.0` (matches upstream `dev`/`master` at the time this fork was cloned).
+Base version: `0.4.0.0` (built on upstream Sunrise, synced through the 0.5.0 release).
 
 ## What works right now
 
@@ -21,6 +22,14 @@ Verified in-game on the live deployment (`C:\Users\Tatsuya\Pictures\Destiny2-Unv
   rolls (Shaxx/Drifter confirmed, rules also authored for Banshee-44/Zavala/Eva/Prismatic
   Recaster/Saint-14), and recycling (Drifter synths, Rahool's 277 shaders) all actually grant/pay
   out now instead of being silently refused.
+- **Persistent save**: account state round-trips through a SQLite database (`state.sqlite3`,
+  native `winsqlite3`), verified by a boot self-test and guarded by a corruption-recovery backup
+  (`state.sqlite3.bak`).
+- **Character create/delete in-game**: opcodes 501/502 (create from the character screen, delete
+  down to an empty roster).
+- **Armor 3.0 stat layer**: the modern stat archetypes backed by real build data.
+- **Per-action logging**: equips, subclass swaps, acquisitions, and mod changes log
+  character/slot/instance/hash to `sunrise.log` instead of failing silently.
 
 ## What doesn't work / is parked
 
@@ -37,9 +46,9 @@ Verified in-game on the live deployment (`C:\Users\Tatsuya\Pictures\Destiny2-Unv
   (`middleware/gameplay/group`, `server/gameplay/group`) but nothing here has ever driven it
   end-to-end. Long-term, not a near-term goal.
 
-See `C:\Users\Tatsuya\Pictures\d2\Sunrise\docs\feature-tracking.md` for the detailed session log,
-including exactly which upstream PRs were ported in and how the roster power-field offset was
-found.
+See `docs/` in this repo for the detailed session logs — the ability-cooldown investigation, the
+investment-root slot map, and the feature-tracking write-up, including exactly which upstream PRs
+were ported in and how the roster power-field offset was found.
 
 ## What I fixed to get here (from stock upstream `dev`)
 
@@ -74,8 +83,8 @@ Toolchain: Visual Studio 2026, `v145` platform toolset, Windows SDK `10.0.26100.
 
 ## Original upstream README
 
-Kept below for reference (build/RE credits, legal disclaimers) — none of the "install this
-yourself" framing applies since this build isn't distributed.
+Kept below for reference (build/RE credits, legal disclaimers) — this is a personal fork, so the
+upstream "install this yourself" framing doesn't apply.
 
 - [Install Instructions](https://github.com/stanuwu/Sunrise/wiki/Installing)
 - [FAQ](https://github.com/stanuwu/Sunrise/wiki/FAQ)
