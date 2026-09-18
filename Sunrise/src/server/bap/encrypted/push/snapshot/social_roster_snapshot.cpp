@@ -14,6 +14,7 @@
 #include "../../../../../middleware/datagen/definitions.h"
 #include "../../../../../state/account/inventory/inventory_state.h"
 #include "../../../../../state/build_data/items/item_catalog.h"
+#include "../../../../../state/equipment/light/resolution/configured_equipment_light_resolver.h"
 #include "../../../../../state/runtime/runtime.h"
 #include "internal.h"
 #include "snapshot_storage.h"
@@ -27,6 +28,8 @@ constexpr std::size_t kReportCapacity = 160;
 /** Where the member record carries the emblem the panel row reads. */
 constexpr std::size_t kEmblemDefinitionOffset = 36;
 constexpr std::size_t kEmblemVariantOffset = 38;
+/** Where the member record carries the Power the panel row reads, as a 32-bit integer. */
+constexpr std::size_t kLightOffset = 20;
 
 /**
  * Absent definition index. The variant field always takes it, because a real value there indexes
@@ -35,19 +38,31 @@ constexpr std::size_t kEmblemVariantOffset = 38;
 constexpr std::uint16_t kEmptyDefinitionIndex = 0xFFFFU;
 
 /**
- * Resolves the selected character's equipped emblem to a native definition index.
- * The client reads this object as the account's emblem, so it must track the live loadout.
+ * Resolves the selected character's equipped emblem to a native definition index, and its
+ * equipment light alongside it.
+ * The client reads this object as the account's emblem and Power, so both have to track the live
+ * loadout: light is the mean of the eight gear slots, so any of them moving must republish it too.
  * @param account Account snapshot, already read under the lock by the caller.
  * @param index Receives the native definition index of the equipped emblem.
  * @param definitionHash Receives the equipped emblem hash.
+ * @param light Receives the selected character's equipment light. Left at zero when it cannot be
+ *              computed, which is the same "nothing to publish" answer the emblem sentinel gives.
  * @return False when nothing is selected, the emblem slot is empty, or the hash is unknown.
  */
 [[nodiscard]] bool selected_emblem_definition_index(const state::AccountState& account,
                                                     std::uint16_t& index,
-                                                    std::uint32_t& definitionHash) noexcept {
-    for (const state::CharacterState& character : account.characters) {
+                                                    std::uint32_t& definitionHash,
+                                                    std::int32_t& light) noexcept {
+    for (std::size_t characterIndex = 0; characterIndex < account.characters.size();
+         ++characterIndex) {
+        const state::CharacterState& character = account.characters[characterIndex];
         if (!character.selected) {
             continue;
+        }
+        std::int32_t resolvedLight = 0;
+        if (state::equipment::light::resolution::character_light(
+                account, characterIndex, resolvedLight)) {
+            light = resolvedLight;
         }
         const auto& slot =
             character.equipment
@@ -90,7 +105,8 @@ bool prepare_social_roster(Scratch& scratch,
 
     std::uint16_t emblem = kEmptyDefinitionIndex;
     std::uint32_t emblemHash = 0;
-    if (!selected_emblem_definition_index(account, emblem, emblemHash)) {
+    std::int32_t light = 0;
+    if (!selected_emblem_definition_index(account, emblem, emblemHash, light)) {
         emblem = kEmptyDefinitionIndex;
     }
 
@@ -121,6 +137,7 @@ bool prepare_social_roster(Scratch& scratch,
             std::memcpy(body.data() + kEmblemVariantOffset,
                         &kEmptyDefinitionIndex,
                         sizeof kEmptyDefinitionIndex);
+            std::memcpy(body.data() + kLightOffset, &light, sizeof light);
         }
         std::size_t compressedSize = 0;
         if (!compress_object(scratch,
@@ -169,12 +186,13 @@ bool prepare_social_roster(Scratch& scratch,
     const int written = std::snprintf(line.data(),
                                       line.size(),
                                       "ev=queuez stage=social_roster result=ok soid=0x%016llX"
-                                      " objects=%zu bytes=%zu emblem=%u hash=0x%08X",
+                                      " objects=%zu bytes=%zu emblem=%u hash=0x%08X light=%d",
                                       static_cast<unsigned long long>(account.primarySoid),
                                       objectCount,
                                       rawUsed,
                                       static_cast<unsigned>(emblem),
-                                      static_cast<unsigned>(emblemHash));
+                                      static_cast<unsigned>(emblemHash),
+                                      static_cast<int>(light));
     if (written > 0) {
         core::log::write(core::log::Channel::server,
                          core::log::Level::info,
