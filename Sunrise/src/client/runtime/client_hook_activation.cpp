@@ -17,6 +17,7 @@
 #include "../executable/image.h"
 #include "../hooks/assert_handler/assert_handler_lifecycle.h"
 #include "../hooks/async_io/async_io_lifetime_guard.h"
+#include "../hooks/bitmap/bitmap_hook_lifecycle.h"
 #include "../hooks/bootflow/bootflow_hook_lifecycle.h"
 #include "../hooks/cine_probe/cine_probe.h"
 #include "../hooks/config_getter/config_getter_lifecycle.h"
@@ -25,11 +26,14 @@
 #include "../hooks/hitch_probe/hitch_probe.h"
 #include "../hooks/inactivity/inactivity_override.h"
 #include "../hooks/infinite_ammo/infinite_ammo.h"
+#include "../hooks/network/investment/investment_derived_rebuild.h"
 #include "../hooks/network/runtime.h"
 #include "../hooks/noclip/runtime.h"
 #include "../hooks/package_trust/package_trust_bypass.h"
 #include "../hooks/polled_input/runtime.h"
+#include "../hooks/queuez/queuez_hook_lifecycle.h"
 #include "../hooks/retail_log/retail_log_lifecycle.h"
+#include "../hooks/sense_chain_guard/sense_chain_guard.h"
 #include "../hooks/stall_probe/stall_probe.h"
 #include "../hooks/teleport/runtime.h"
 #include "../hooks/world_objects/world_object_registry.h"
@@ -198,6 +202,13 @@ void clear_game_targets() noexcept {
     (void)hooks::cine_probe::install();
     // Retains the native handle for package placements without publishing unnamed map objects.
     (void)hooks::world_objects::install();
+    // Required crash guards; each reports its own outcome and never demotes this stage.
+    (void)hooks::bitmap::install();
+    (void)hooks::queuez::install();
+    (void)hooks::sense_chain_guard::install();
+    // Rebuilds cached derived investment state once the real replicated objects actually arrive,
+    // instead of leaving it stale from before sign-in committed. Reports its own outcome.
+    (void)hooks::network::investment::install();
     // The server asks for refresh slices through this and never calls the Client otherwise.
     if (!server::bap::register_client_investment_slice_consumer(
             &content::investment::worker::request_slice)) {

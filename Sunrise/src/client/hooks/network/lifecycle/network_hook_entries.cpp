@@ -4,6 +4,7 @@
 #include "../../../targets/steam_targets.h"
 #include "../bubble_authority/bubble_authority_replacements.h"
 #include "../coordinator/network_call_coordinator.h"
+#include "../signon/signon_readiness_replacements.h"
 
 namespace sunrise::client::hooks::network::lifecycle {
 namespace {
@@ -15,6 +16,8 @@ namespace {
         http::execute_request_entry_point(),
         bubble_authority::decoder_entry_point(),
         bubble_authority::content_untracked_entry_point(),
+        signon::readiness_entry_point(),
+        signon::ready_entry_point(),
     };
 }
 
@@ -37,6 +40,8 @@ GameSpecs game_specs() noexcept {
         hooking::detour::Spec{resolved.httpExecuteRequest, replacements[1]},
         hooking::detour::Spec{resolved.bubbleAuthorityDecoder, replacements[2]},
         hooking::detour::Spec{resolved.contentUntrackedGetter, replacements[3]},
+        hooking::detour::Spec{resolved.signOnReadinessFailure, replacements[4]},
+        hooking::detour::Spec{resolved.signOnReadinessReady, replacements[5]},
     };
 }
 
