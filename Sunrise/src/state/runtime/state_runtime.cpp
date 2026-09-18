@@ -17,6 +17,7 @@
 #include "../../core/settings/settings.h"
 #include "../activity/defaults/activity_defaults_validation.h"
 #include "../build_data/runtime.h"
+#include "../investment/investment_checkpoint_thread.h"
 #include "../investment/store_internal.h"
 #include "../unlocks/unlocks_records.h"
 #include "equipment/configured_equipment_identity.h"
@@ -311,6 +312,8 @@ void shutdown() noexcept {
     secure_reset(runtime::storage::g_state);
     ReleaseSRWLockExclusive(&runtime::storage::g_stateLock);
     build_data::shutdown();
+    investment::store::stop_checkpoint_thread();
+    investment::store::checkpoint_and_backup();
     investment::store::shutdown();
 }
 

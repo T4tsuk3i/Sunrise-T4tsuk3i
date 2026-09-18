@@ -1,11 +1,15 @@
 #include "store_internal.h"
 
+#include "investment_backup.h"
+#include "investment_checkpoint_thread.h"
+
 namespace sunrise::state::investment::store {
 
 sqlite3* g_database{};
 std::recursive_mutex g_mutex;
 Session g_session;
 std::uint64_t g_failureSerial{};
+core::path::Buffer g_databasePath{};
 
 /** SQLite requires this sentinel to copy text borrowed from a caller. */
 sqlite3_destructor_type copy_text() noexcept {
@@ -81,6 +85,7 @@ bool Statement::text(int column, std::string_view& value) const noexcept {
 
 /** New databases receive schema and defaults in one durable transaction. */
 bool open(std::string_view path,
+          const core::path::Buffer& widePath,
           std::string_view schema,
           std::string_view defaults,
           std::string_view settingsSchema,
@@ -98,10 +103,23 @@ bool open(std::string_view path,
         shutdown();
         return false;
     }
+    g_databasePath = widePath;
     // One short busy wait permits a local database editor to finish its transaction.
     constexpr int kBusyMilliseconds = 5000;
     sqlite3_busy_timeout(g_database, kBusyMilliseconds);
-    bool ready = execute("PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;");
+    // WAL + synchronous=NORMAL is the standard durable pairing for this threat model: every
+    // commit is still crash-safe, but a commit is a WAL append instead of a full rollback-journal
+    // write, and readers never block a writer. synchronous=FULL's extra fsync bought safety this
+    // pairing already has under WAL, at a cost paid on every single mutation instead of once.
+    // wal_autocheckpoint=0 hands checkpoint timing to the scheduler in
+    // investment_checkpoint_thread.cpp instead of SQLite's own size-triggered default, which can
+    // otherwise land mid-frame during play.
+    bool ready = execute("PRAGMA foreign_keys=ON;"
+                         "PRAGMA journal_mode=WAL;"
+                         "PRAGMA synchronous=NORMAL;"
+                         "PRAGMA wal_autocheckpoint=0;"
+                         "PRAGMA temp_store=MEMORY;"
+                         "PRAGMA cache_size=-8000;");
     int version = -1;
     {
         Statement query("PRAGMA user_version");
@@ -144,11 +162,29 @@ bool open(std::string_view path,
     return ready;
 }
 
+/**
+ * Folds the WAL fully into the main file, refreshes the query planner's statistics for the next
+ * session, and backs up the result -- in that order, so the backup copies the fully folded-in
+ * main file rather than one still owing pages to its WAL. Call `stop_checkpoint_thread` first, so
+ * the scheduled checkpoint never races this one, and call this before `shutdown`, while the
+ * database is still open. A no-op backup here (an unopened or already-closed database) is not a
+ * failure; there is nothing yet worth protecting.
+ */
+void checkpoint_and_backup() noexcept {
+    const std::lock_guard lock(g_mutex);
+    if (g_database == nullptr) {
+        return;
+    }
+    (void)execute("PRAGMA wal_checkpoint(TRUNCATE); PRAGMA optimize;");
+    (void)backup_database(g_databasePath);
+}
+
 /** Saves are synchronous, so shutdown only closes the handle and discards session fields. */
 void shutdown() noexcept {
     const std::lock_guard lock(g_mutex);
     sqlite3_close_v2(g_database);
     g_database = nullptr;
+    g_databasePath = {};
     g_session = {};
 }
 

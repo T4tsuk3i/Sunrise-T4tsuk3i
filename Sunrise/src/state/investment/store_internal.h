@@ -8,6 +8,7 @@
 #include <string>
 #include <type_traits>
 
+#include "../../core/filesystem/path.h"
 #include "store.h"
 
 namespace sunrise::state::investment::store {
@@ -15,6 +16,9 @@ namespace sunrise::state::investment::store {
 extern sqlite3* g_database;
 extern std::recursive_mutex g_mutex;
 extern std::uint64_t g_failureSerial;
+/** Wide path of the currently open database, set by `open`. Backup and restore need this form;
+ * `open` itself only needs the narrow one already passed in. */
+extern core::path::Buffer g_databasePath;
 
 /** Only session fields survive between database calls. */
 struct Session {

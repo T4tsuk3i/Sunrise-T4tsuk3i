@@ -3,6 +3,7 @@
 #include <string>
 #include <string_view>
 
+#include "../../core/filesystem/path.h"
 #include "../account/account_state.h"
 #include "../entitlements/definition.h"
 #include "../unlocks/definition.h"
@@ -24,11 +25,24 @@ enum class Bank : int {
 
 [[nodiscard]] bool initialize(void* module) noexcept;
 [[nodiscard]] bool validate() noexcept;
+/**
+ * @param path Narrow (UTF-8) form of `widePath`, what SQLite itself opens.
+ * @param widePath Same file, kept alongside the narrow form so backup and restore -- which go
+ * through Win32 file APIs -- never need to re-derive or re-encode it.
+ */
 [[nodiscard]] bool open(std::string_view path,
+                        const core::path::Buffer& widePath,
                         std::string_view schema,
                         std::string_view defaults,
                         std::string_view settingsSchema,
                         std::string_view settingsDefaults) noexcept;
+/**
+ * Checkpoints, refreshes planner statistics and backs up the open database. Call before
+ * `shutdown`, after `stop_checkpoint_thread` if it was started.
+ */
+void checkpoint_and_backup() noexcept;
+/** Closes the database and discards session fields. Does not back up; call
+ * `checkpoint_and_backup` first if this is a real shutdown, not a failed or disposable open. */
 void shutdown() noexcept;
 [[nodiscard]] bool read_account(AccountState& output) noexcept;
 [[nodiscard]] AccountState account() noexcept;
