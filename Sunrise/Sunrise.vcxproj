@@ -101,9 +101,12 @@
   <ItemGroup>
     <ClCompile Include="src\state\gameplay\external\entity_object_types.cpp" />
     <ClCompile Include="src\state\investment\investment_account_store.cpp" />
+    <ClCompile Include="src\state\investment\investment_backup.cpp" />
+    <ClCompile Include="src\state\investment\investment_checkpoint_thread.cpp" />
     <ClCompile Include="src\state\investment\investment_database.cpp" />
     <ClCompile Include="src\middleware\content\packages\tables\quest_initialization_reader.cpp" />
     <ClCompile Include="src\state\investment\investment_inventory_store.cpp" />
+    <ClCompile Include="src\state\investment\investment_self_test.cpp" />
     <ClCompile Include="src\state\investment\investment_store_boot.cpp" />
     <ClCompile Include="src\state\investment\investment_unlock_store.cpp" />
     <ClCompile Include="vendor\sqlite\sqlite3.c">
@@ -2160,6 +2163,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vendor\sqlite\sqlite3.h" />
+    <ClInclude Include="src\state\investment\investment_backup.h" />
+    <ClInclude Include="src\state\investment\investment_checkpoint_thread.h" />
+    <ClInclude Include="src\state\investment\investment_self_test.h" />
     <ClInclude Include="src\state\investment\store.h" />
     <ClInclude Include="src\state\investment\store_internal.h" />
     <None Include="vendor\sqlite\NOTICE.txt" />
