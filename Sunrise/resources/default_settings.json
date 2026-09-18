@@ -35,7 +35,10 @@
     },
     "custom_bootflow_textures": true,
     "socket_menu_routing": false,
-    "reveal_lore_books": true
+    "reveal_lore_books": true,
+    "region_private": false,
+    "skip_orbit_cinematic_wait": false,
+    "pin_replicated_record": true
   },
   "server": {
     "bap_port": 30974,

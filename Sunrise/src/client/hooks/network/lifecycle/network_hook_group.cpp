@@ -28,6 +28,8 @@ constexpr std::array<const char*, kHandleCount> kSlotNames{
     "http_execute_request",
     "bubble_authority_decoder",
     "content_untracked_getter",
+    "sign_on_readiness_failure",
+    "sign_on_readiness_ready",
 };
 // A short table would zero-fill its tail and shift every later name onto the wrong slot.
 static_assert(kSlotNames.back() != nullptr);

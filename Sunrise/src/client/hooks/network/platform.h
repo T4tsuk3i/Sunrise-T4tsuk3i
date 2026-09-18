@@ -21,6 +21,8 @@ enum class HookSlot : std::size_t {
     httpExecuteRequest,
     bubbleAuthorityDecoder,
     contentUntrackedGetter,
+    signOnReadinessFailure,
+    signOnReadinessReady,
     count,
 };
 
