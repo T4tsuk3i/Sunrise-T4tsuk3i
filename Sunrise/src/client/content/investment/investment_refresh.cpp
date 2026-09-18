@@ -44,7 +44,7 @@ bool refresh() noexcept {
         const std::lock_guard lock(g_refreshLock);
         const bool persisted = state::ensure_profile_item_identities()
                                && state::ensure_character_subclasses() && emote_collection_settled()
-                               && state::build_data::persist();
+                               && state::ensure_material_grants() && state::build_data::persist();
         // Nothing reads a package again until the next boot, so the open files and the held
         // tables go back now rather than at process exit.
         middleware::content::packages::reader::release_caches();
@@ -62,7 +62,7 @@ bool refresh() noexcept {
     const bool domainsReady = ready();
     const bool complete = domainsReady && state::ensure_profile_item_identities()
                           && state::ensure_character_subclasses() && emote_collection_settled()
-                          && state::build_data::persist();
+                          && state::ensure_material_grants() && state::build_data::persist();
     // The overlay ends with the work, not with the slice, so it spans every retry the pass needs.
     if (complete) {
         core::ui::busy::end(core::ui::busy::Task::contentExtraction);

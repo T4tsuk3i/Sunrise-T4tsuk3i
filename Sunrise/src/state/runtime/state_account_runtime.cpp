@@ -657,4 +657,78 @@ bool ensure_character_subclasses() noexcept {
     return true;
 }
 
+namespace {
+
+/** One account-wide material this build widens, and the floor Sunrise tops it up to. */
+struct MaterialGrant {
+    std::uint32_t definitionHash;
+    std::int32_t targetQuantity;
+};
+
+/**
+ * Real Destiny 2 material hashes, identified against a live account's own inventory (not
+ * guessed): the golf-ball icon at quantity 10 is Ascendant Shard, the gem at 999 is Enhancement
+ * Core, the thin yellow gem at 50 is Enhancement Prism, the studded cube at 25 is Upgrade Module,
+ * and the green icon at 500 is Gunsmith Materials, cross-checked with its own in-game tooltip.
+ * Target quantities follow the request literally: current amount plus the stated stack grant
+ * (Glimmer's is stated directly; Gunsmith Materials' is a flat target, not an addition).
+ */
+constexpr std::array<MaterialGrant, 6> kMaterialGrants = {{
+    {3159615086U, 1'000'000}, // Glimmer: 100,000 -> 1,000,000 (ten times over)
+    {4257549985U, 40},        // Ascendant Shard: 10 + 3 stacks of 10
+    {3853748946U, 1998},      // Enhancement Core: 999 + one more stack of 999
+    {4257549984U, 70},        // Enhancement Prism: 50 + two more stacks of 10
+    {2979281381U, 75},        // Upgrade Module: 25 + one more stack of 50
+    {685157383U, 5000},       // Gunsmith Materials: flat 5,000
+}};
+
+} // namespace
+
+/** Tops up the fixed account-wide materials in `kMaterialGrants` to their target ceiling. */
+bool ensure_material_grants() noexcept {
+    investment::store::g_mutex.lock();
+    AccountState candidate = investment::store::account();
+    if (!account::valid(candidate)) {
+        investment::store::g_mutex.unlock();
+        return true;
+    }
+    std::int32_t serial = 0;
+    for (std::size_t index = 0; index < candidate.profileItemCount; ++index) {
+        serial = (std::max)(serial, candidate.profileItems[index].mutationSerial);
+    }
+    bool changed = false;
+    for (const MaterialGrant& grant : kMaterialGrants) {
+        std::size_t at = candidate.profileItemCount;
+        for (std::size_t index = 0; index < candidate.profileItemCount; ++index) {
+            if (candidate.profileItems[index].definitionHash == grant.definitionHash) {
+                at = index;
+                break;
+            }
+        }
+        if (at < candidate.profileItemCount) {
+            if (candidate.profileItems[at].quantity < grant.targetQuantity) {
+                candidate.profileItems[at].quantity = grant.targetQuantity;
+                candidate.profileItems[at].mutationSerial = ++serial;
+                changed = true;
+            }
+        } else if (candidate.profileItemCount < candidate.profileItems.size()) {
+            candidate.profileItems[candidate.profileItemCount] =
+                authored_inventory::ProfileItem{0, grant.definitionHash, grant.targetQuantity,
+                                                ++serial};
+            ++candidate.profileItemCount;
+            changed = true;
+        }
+    }
+    if (!changed || !account::valid(candidate)) {
+        investment::store::g_mutex.unlock();
+        return true;
+    }
+    if (!investment::store::write_account(candidate)) {
+        investment::store::g_mutex.unlock();
+        return false;
+    }
+    investment::store::g_mutex.unlock();
+    return true;
+}
+
 } // namespace sunrise::state

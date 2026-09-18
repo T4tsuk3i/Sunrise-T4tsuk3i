@@ -44,6 +44,14 @@ enum class EmoteCollectionOutcome : std::uint8_t {
  */
 [[nodiscard]] bool ensure_character_subclasses() noexcept;
 
+/**
+ * Tops up a fixed set of account-wide materials to their target ceiling, so testing does not
+ * depend on activity/combat loops for a material supply. Idempotent: a row already at or above
+ * its target is left alone.
+ * @return True when every grant was applied or already satisfied, or there was nothing to check.
+ */
+[[nodiscard]] bool ensure_material_grants() noexcept;
+
 /** Prepared subclass socket-entry selection for the equipped selected-character subclass. */
 struct PendingSubclassSelection {
     /** Exact prepare-time character view used as the commit staleness guard. */
