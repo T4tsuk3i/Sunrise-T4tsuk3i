@@ -296,8 +296,24 @@ bool process(const ServiceRoute& route,
             // three is in its normal phase, and the creation flow leaves it outside that phase, so
             // the client would wait forever on a publication that was never staged.
             std::int32_t creationVersion = middleware::web_service::kNoFamily4Publication;
-            if (queuezState.family4Active
-                && queuezState.family4Version != (std::numeric_limits<std::int32_t>::max)()) {
+            // The first character of an account is selected by create_character, because the
+            // client's held family-zero subscribe is released only by a pick. Publish that pick;
+            // every other creation leaves the selection alone and waits on the armed resync.
+            if (state::account::selected_character_soid(state::account_snapshot())
+                == characterSoid) {
+                auto* creationSelect = emplace_transaction<queuez::SelectCharacter>(outcome);
+                if (creationSelect != nullptr
+                    && queuez::stage_select_character(
+                        queuezState, characterSoid, *creationSelect)) {
+                    outcome.hasSelectCharacter = true;
+                    creationVersion = creationSelect->after.family4Version;
+                } else {
+                    clear_transaction(outcome);
+                    sunrise::server::bap::arm_account_resync_everywhere();
+                }
+            } else if (queuezState.family4Active
+                       && queuezState.family4Version
+                              != (std::numeric_limits<std::int32_t>::max)()) {
                 creationVersion = queuezState.family4Version + 1;
             }
             core::log::write(core::log::Channel::server,

@@ -216,9 +216,13 @@ bool create_character(std::uint8_t characterClass,
     character.appearanceHeader = appearanceHeader;
     character.appearanceHeaderValid = true;
 
-    // The new character joins the roster unselected. Marking it selected here would be a pick
-    // the player never made, and a pick is what leaves the character-select step for orbit, so
-    // creation would skip the roster it just changed. Nothing is picked until the player picks.
+    // With characters already on the roster the new one joins unselected: marking it selected
+    // would be a pick the player never made, and a pick is what leaves the character-select step
+    // for orbit, so creation would skip the roster it just changed. The first character of an
+    // account is different. The client's family-zero subscribe was held for want of any character
+    // to name, and only a pick releases it, so creating it is the pick or the client never
+    // finishes loading.
+    character.selected = candidate.characterCount == 0;
     ++candidate.characterCount;
 
     // Counted above so the fresh-SOID scan inside sees this character's own items as they are
